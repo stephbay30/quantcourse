@@ -40,22 +40,10 @@ class BackTest:
     def feed_data(self):
 
         trade_data = self.his_df.copy()
-        trade_data.rename(
-            columns={
-                "开盘时间": "date",
-                "货币对": "token",
-                "开盘价": "open",
-                "最高价": "high",
-                "最低价": "low",
-                "收盘价": "close",
-                '成交量': 'volume',
-            },
-            inplace=True,
-        )
-        trade_data['date'] = trade_data['date'].str[:10]
         trade_data.index = pd.to_datetime(trade_data.date)
-        trade_data = trade_data[trade_data.index >= '2021-01-01']
+        trade_data = trade_data[trade_data.index >= '2019-01-01']
         trade_data['openinterest'] = 0
+        trade_data.rename(columns={'vol':'volume'}, inplace=True)
         token_lst = trade_data['token'].unique()
         dic = {}
         for token in token_lst:
@@ -83,6 +71,7 @@ class BackTest:
         for token, df in dic.items():
             datafeed = bt.feeds.PandasData(dataname=df, fromdate=self.start, todate=self.end)
             self.cerebro.adddata(datafeed, name=token)
+        print('Data has been fed')
 
     def load_strategy(self):
         self.cerebro.addstrategy(TestStrategy, bin = self.bin, symbol_df = self.symbol_df)
@@ -159,46 +148,53 @@ class BackTest:
 
 if __name__ == "__main__":
     # 设置起止日期与引擎
-    bmk_path = 'D:/zorro/回测数据/bmk.csv'
-    his_path = 'D:/zorro/回测数据/all_data.csv'
-    his_df = pd.read_csv(his_path)
-    bmk_df = pd.read_csv(bmk_path, parse_dates=['date'])
+    index = 'zz500'
+    bmk_path = f'../config/{index}_ret.pkl'
+    bmk_df = pd.read_pickle(bmk_path)
     bmk_df.set_index("date", inplace=True)
 
-    symbol_path = fr'D:/zorro/week11/graphic_CNN/config/train_circle_12m_7d'
+    file_path = 'D:/量化实习/zz500_his'
+    file_list = os.listdir(file_path)
+    his_df = pd.concat([pd.read_pickle(f'{file_path}/{f}') for f in file_list], ignore_index=True)
+
+
+    symbol_path = ('../model_res/'
+                   'time_step_20_train_circle_48m_future_cat_1d_testing_from_2020-01-01_to_2024-04-30/'
+                   'predictions')
     symbol_files = sorted(os.listdir(symbol_path))
     symbol_df = pd.concat([pd.read_csv(f'{symbol_path}/{f}') for f in symbol_files],ignore_index=True)
 
-
-    save_path_fold = fr'D:/zorro/week11/graphic_CNN/test_res/train_circle_12m_7d'
+    save_path_fold = ('../model_res/'
+                   'time_step_20_train_circle_48m_future_cat_1d_testing_from_2020-01-01_to_2024-04-30/'
+                   'test_res')
     if not os.path.exists(save_path_fold):
         os.makedirs(save_path_fold)
-    for days in range(7):
-        start = datetime.datetime(2024, 1, 1) + datetime.timedelta(days=days)
-        end = datetime.datetime(2024,4, 12)
-        save_path = fr'{save_path_fold}/track_{days}'
-        if not os.path.exists(save_path):
-            os.makedirs(save_path)
-        for bin in range(1,6):
-            cerebro = bt.Cerebro()
-            save_html_name = save_path + '/' + f'bin{bin}'
-            save_file_name = save_path + '/' + f'bin{bin}'
-            print(f'now test bin {bin}')
-            backtestor = BackTest(start=start, end=end, cerebro=cerebro, bin =bin, symbol_df= symbol_df,
-                                  save_html_name=save_html_name,save_file_name=save_file_name,
-                                  his_df = his_df,bmk_df=bmk_df)
-            backtestor.run()
+    # for days in range(7):
+    start = datetime.datetime(2020, 1, 2)
+    end = datetime.datetime(2023,6, 30)
+    save_path = fr'{save_path_fold}'
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+    for bin in range(1,6):
+        cerebro = bt.Cerebro()
+        save_html_name = save_path + '/' + f'bin{bin}'
+        save_file_name = save_path + '/' + f'bin{bin}'
+        print(f'now test bin {bin}')
+        backtestor = BackTest(start=start, end=end, cerebro=cerebro, bin =bin, symbol_df= symbol_df,
+                              save_html_name=save_html_name,save_file_name=save_file_name,
+                              his_df = his_df,bmk_df=bmk_df)
+        backtestor.run()
 
 
-        visualizer = FinancialDataVisualizer(start, end, save_path , bmk_df, save_path=save_path,file_name_prefix='test')
-        visualizer.run()
+    visualizer = FinancialDataVisualizer(start, end, save_path , bmk_df, save_path=save_path,file_name_prefix='test')
+    visualizer.run()
 
-    gen_average_report(save_path_fold)
-    start = datetime.datetime(2024, 1, 1)
-    end = datetime.datetime(2024, 4, 12)
-
-    visualizer_avg = FinancialDataVisualizer(start, end, save_path_fold, bmk_df, save_path=save_path_fold, file_name_prefix='avg')
-    visualizer_avg.run()
+    # gen_average_report(save_path_fold)
+    # start = datetime.datetime(2024, 1, 1)
+    # end = datetime.datetime(2024, 4, 12)
+    #
+    # visualizer_avg = FinancialDataVisualizer(start, end, save_path_fold, bmk_df, save_path=save_path_fold, file_name_prefix='avg')
+    # visualizer_avg.run()
 
 
 

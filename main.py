@@ -293,20 +293,20 @@ class ModelRunner:
 if __name__ == '__main__':
     param_grid = {
         'num_channels': [
-            [16, 32, 64],
+            # [16, 32, 64],
             [32, 64, 128],
-            [16, 32, 64,128],
+            # [16, 32, 64,128],
         ],
-        'activation_function': ['elu','relu'],
-        'linear_units': [64,128]
+        'activation_function': ['elu'],
+        'linear_units': [128]
     }
     time_step = 20
     dropout_rate = 0.25
     num_epochs = 50
     batch_size = 512
     index = 'zz500'
-    train_circle = '48m'
-    test_circle = '6m'
+    train_circle = '60m'
+    test_circle = '12m'
     input_size = (6,time_step,time_step)
 
     '''
@@ -317,7 +317,7 @@ if __name__ == '__main__':
     start_date = '2022-01-01'
     end_date = '2024-04-30'
 
-    label = 'future_cat_1d'
+    label = 'future_return_1d'
     file_path = f'config/{index}_data_{time_step}'
     save_path = f'model_res/time_step_{time_step}_train_circle_{train_circle}_{label}_testing_from_{start_date}_to_{end_date}'
     if not os.path.exists(save_path):

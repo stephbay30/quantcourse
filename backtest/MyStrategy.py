@@ -21,38 +21,38 @@ class TestStrategy(bt.Strategy):
         self.cnt = 0
 
     def next(self):
-        if self.cnt % 7 == 0:
-            cur_date = self.datas[0].datetime.date(0) # 获取当前日期
-            print(f'-------------{cur_date}--------------------')
-            symbol_df = self.symbol_df[self.symbol_df['date'] == str(cur_date)] #获取当前日期的symbol
-            cur_val = self.broker.get_value() #获取当前日期的总仓位价值
-            tradable_df = symbol_df[symbol_df['group_factor'] == self.bin] #获取当前日期满足分组的可交易的df
+        # if self.cnt % 7 == 0:
+        cur_date = self.datas[0].datetime.date(0) # 获取当前日期
+        print(f'-------------{cur_date}--------------------')
+        symbol_df = self.symbol_df[self.symbol_df['date'] == str(cur_date)] #获取当前日期的symbol
+        cur_val = self.broker.get_value() #获取当前日期的总仓位价值
+        tradable_df = symbol_df[symbol_df['group_factor'] == self.bin] #获取当前日期满足分组的可交易的df
 
-            hold_list = [
-                _p._name
-                for _p in self.broker.positions
-                if self.broker.getposition(_p).size != 0
-            ] #获取当前持仓
-            buy_list = list(tradable_df['token'].values) #获取今天应该买的持仓
-            len_tradable = len(buy_list) #今天该买多少只股票
+        hold_list = [
+            _p._name
+            for _p in self.broker.positions
+            if self.broker.getposition(_p).size != 0
+        ] #获取当前持仓
+        buy_list = list(tradable_df['token'].values) #获取今天应该买的持仓
+        len_tradable = len(buy_list) #今天该买多少只股票
 
-            for token in hold_list: # 对于当前持仓，如果今天不应该买它，那么就清仓
-                if token not in buy_list:
-                    #卖出token
-                    d = self.name_to_data[token]
-                    self.close(d)
-
-            if not buy_list: #如果今天没有买的票，直接下一天
-                return
-
-
-            for token in buy_list: #对于今天要买的票，均仓买入
-
+        for token in hold_list: # 对于当前持仓，如果今天不应该买它，那么就清仓
+            if token not in buy_list:
+                #卖出token
                 d = self.name_to_data[token]
-                cur_price = d.close[0]
-                cur_target = cur_val * ( 0.9/len_tradable)  / cur_price
-                self.order = self.order_target_size(d, target=cur_target)
-        self.cnt+=1
+                self.close(d)
+
+        if not buy_list: #如果今天没有买的票，直接下一天
+            return
+
+
+        for token in buy_list: #对于今天要买的票，均仓买入
+
+            d = self.name_to_data[token]
+            cur_price = d.close[0]
+            cur_target = cur_val * ( 0.95/len_tradable)  / cur_price
+            self.order = self.order_target_size(d, target=cur_target)
+        # self.cnt+=1
 
 
 
