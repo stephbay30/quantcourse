@@ -121,7 +121,64 @@ class SimpleCNN4Ret(nn.Module):
 
 
 
+class SimpleCNN4Ret2d(nn.Module):
+    def __init__(self, input_size, dropout_rate, num_channels=[32, 64, 128], activation_function='elu', linear_units=128):
+        super(SimpleCNN4Ret2d, self).__init__()
+        self.input_size = input_size
+        self.input_length, self.input_features = input_size
 
+        layers = []
+        in_channels = 1  # For 2D data, the input channel is 1
+        kernel_sizes = [3 for _ in range(len(num_channels))]
+        activations = [activation_function for _ in range(len(num_channels))]
+
+        # Create convolutional layers based on the num_channels list
+        for out_channels, kernel_size, activation in zip(num_channels, kernel_sizes, activations):
+            layers.append(nn.Conv2d(in_channels, out_channels, (kernel_size, kernel_size), padding=1))
+            layers.append(nn.BatchNorm2d(out_channels))
+            if activation == 'relu':
+                layers.append(nn.ReLU())
+            elif activation == 'elu':
+                layers.append(nn.ELU())
+            # layers.append(nn.MaxPool2d(kernel_size=2, stride=2))
+            layers.append(nn.Dropout(dropout_rate))
+            in_channels = out_channels
+
+        self.conv_layers = nn.Sequential(*layers)
+
+        # Calculate the size of the flattened features after all convolutional layers
+        self.flattened_size = self.calculate_flattened_size()
+
+        # Fully connected layers
+        self.fc_layers = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(in_features=self.flattened_size, out_features=linear_units),
+            nn.ELU(),
+            nn.Dropout(dropout_rate),
+            nn.Linear(in_features=linear_units, out_features=1)
+        )
+        self._initialize_weights()
+
+    def forward(self, x):
+        x = x.unsqueeze(1)  # Add channel dimension for 2D convolution
+        x = self.conv_layers(x)
+        x = self.fc_layers(x)
+        return x
+
+    def calculate_flattened_size(self):
+        # Temporarily create a tensor of zeros with the input size
+        temp_tensor = torch.zeros((1, 1, self.input_length, self.input_features))
+        # Apply convolutional layers (without the fully connected layers)
+        temp_tensor = self.conv_layers(temp_tensor)
+        # Return the resulting flattened size
+        return int(np.prod(temp_tensor.size()))
+
+    def _initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
+                init.xavier_uniform_(m.weight)
+                if m.bias is not None:
+                    init.constant_(m.bias, 0)
 
 class GradualWarmupScheduler(LRScheduler):
     def __init__(self, optimizer, multiplier, total_epoch, after_scheduler=None):
